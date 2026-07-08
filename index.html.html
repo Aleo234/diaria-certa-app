@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16233F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diária Certa">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Diária Certa — Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#16233F;
+    --ink-soft:#4C5A76;
+    --paper:#EDF1F5;
+    --surface:#FFFFFF;
+    --primary:#1F6F5C;
+    --primary-soft:#E3F0EC;
+    --accent:#C98A2C;
+    --accent-soft:#F7EBD8;
+    --danger:#B23A2E;
+    --danger-soft:#F8E6E3;
+    --line:#D7DEE6;
+    --radius:14px;
+    --shadow:0 12px 28px -10px rgba(22,35,63,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#C6CDD8;
+    font-family:'IBM Plex Sans',sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:28px 12px;
+    min-height:100vh;
+  }
+  .device{
+    width:390px;
+    max-width:100%;
+    background:var(--paper);
+    border-radius:38px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.45), 0 0 0 10px #1a1f29;
+    overflow:hidden;
+    position:relative;
+  }
+  .statusbar{
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink);
+    background:var(--paper);
+  }
+  .screen{
+    display:none;
+    min-height:640px;
+    max-height:640px;
+    overflow-y:auto;
+    padding-bottom:20px;
+    animation:fade .22s ease;
+  }
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 18px 10px;
+  }
+  .topbar h1{
+    font-family:'Fraunces',serif;
+    font-size:20px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.2px;
+  }
+  .back-btn{
+    width:34px;height:34px;border-radius:10px;
+    background:var(--surface);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;
+    font-size:16px;color:var(--ink);
+  }
+  .brand-row{
+    padding:18px 18px 6px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{
+    font-family:'Fraunces',serif;font-weight:700;font-size:24px;letter-spacing:-0.3px;
+  }
+  .brand small{
+    display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:400;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin-top:2px;
+  }
+
+  /* Selo / stamp signature element */
+  .selo{
+    width:52px;height:52px;border-radius:50%;
+    border:2px dashed var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    transform:rotate(-8deg);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    color:var(--accent);flex-shrink:0;background:var(--accent-soft);
+    transition:all .3s ease;
+  }
+  .selo.completo{
+    border-color:var(--primary);border-style:solid;color:var(--primary);background:var(--primary-soft);
+  }
+  .selo span{transform:rotate(8deg);}
+
+  .content{padding:0 18px;}
+
+  .card{
+    background:var(--surface);border-radius:var(--radius);
+    padding:16px;margin-bottom:12px;
+    box-shadow:var(--shadow);border:1px solid rgba(22,35,63,0.04);
+  }
+  .trip-card{cursor:pointer;transition:transform .15s ease;}
+  .trip-card:active{transform:scale(0.98);}
+  .trip-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .trip-dest{font-family:'Fraunces',serif;font-weight:600;font-size:17px;margin:0 0 2px;}
+  .trip-dates{font-size:12.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .badge{
+    font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:0.3px;white-space:nowrap;
+  }
+  .badge.prazo{background:var(--accent-soft);color:var(--accent);}
+  .badge.prazo.urgente{background:var(--danger-soft);color:var(--danger);}
+  .badge.ok{background:var(--primary-soft);color:var(--primary);}
+  .progress-row{display:flex;align-items:center;gap:8px;margin-top:12px;}
+  .progress-track{flex:1;height:6px;background:var(--line);border-radius:6px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--primary);border-radius:6px;transition:width .4s ease;}
+  .progress-label{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+
+  .section-label{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:1.2px;color:var(--ink-soft);margin:18px 0 8px;padding:0 18px;
+  }
+
+  .check-item{
+    background:var(--surface);border-radius:var(--radius);
+    padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    border:1px solid var(--line);cursor:pointer;transition:transform .15s ease;
+  }
+  .check-item:active{transform:scale(0.98);}
+  .check-icon{
+    width:38px;height:38px;border-radius:10px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+    background:var(--danger-soft);color:var(--danger);
+  }
+  .check-item.done .check-icon{background:var(--primary-soft);color:var(--primary);}
+  .check-body{flex:1;min-width:0;}
+  .check-title{font-weight:600;font-size:14px;margin:0 0 2px;}
+  .check-sub{font-size:12px;color:var(--ink-soft);margin:0;}
+  .check-status{font-size:11px;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--danger);}
+  .check-item.done .check-status{color:var(--primary);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+  .chip{
+    padding:8px 13px;border-radius:20px;border:1px solid var(--line);
+    background:var(--surface);font-size:12.5px;cursor:pointer;color:var(--ink-soft);
+    transition:all .15s ease;
+  }
+  .chip.selected{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .capture-btns{display:flex;gap:10px;margin:16px 0;}
+  .btn{
+    flex:1;padding:14px;border-radius:12px;border:none;font-size:13.5px;font-weight:600;
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-outline{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
+  .btn-icon{font-size:18px;}
+  .btn-full{width:100%;padding:15px;border-radius:12px;border:none;background:var(--primary);
+    color:#fff;font-weight:600;font-size:14.5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+  .btn-full:disabled{background:var(--line);color:var(--ink-soft);cursor:not-allowed;}
+  .btn-full.secondary{background:transparent;border:1px solid var(--line);color:var(--ink);margin-top:8px;}
+
+  .thumb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+  .thumb{
+    aspect-ratio:1;border-radius:10px;overflow:hidden;position:relative;
+    background:var(--surface);border:1px solid var(--line);
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb-tag{
+    position:absolute;bottom:0;left:0;right:0;background:rgba(22,35,63,0.82);
+    color:#fff;font-size:8.5px;padding:3px 5px;font-family:'IBM Plex Mono',monospace;
+    line-height:1.3;
+  }
+
+  label.field-label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin:14px 0 6px;}
+  textarea, input[type=text], input[type=password]{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;color:var(--ink);
+    background:var(--surface);resize:vertical;
+  }
+
+  .empty-hint{text-align:center;padding:26px 10px;color:var(--ink-soft);font-size:12.5px;}
+
+  .success-wrap{padding:60px 30px 20px;text-align:center;}
+  .success-selo{
+    width:110px;height:110px;border-radius:50%;border:3px solid var(--primary);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 22px;
+    transform:rotate(-6deg);color:var(--primary);font-size:44px;background:var(--primary-soft);
+  }
+  .protocol{
+    font-family:'IBM Plex Mono',monospace;background:var(--surface);border:1px dashed var(--line);
+    border-radius:10px;padding:12px;margin-top:20px;font-size:13px;color:var(--ink-soft);
+  }
+  .protocol b{color:var(--ink);display:block;font-size:16px;margin-top:2px;}
+
+  .hidden-input{display:none;}
+
+  @media (max-width: 480px){
+    body{ padding:0; background:var(--paper); }
+    .device{
+      width:100%; max-width:100%; min-height:100vh;
+      border-radius:0; box-shadow:none;
+    }
+    .statusbar{ display:none; }
+    .screen{ min-height:calc(100vh - 0px); max-height:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span>Diária Certa</span>
+    <span>●●●</span>
+  </div>
+
+  <!-- SCREEN 0: LOGIN -->
+  <div class="screen active" id="screen-login">
+    <div class="brand-row">
+      <div class="brand">Diária Certa<small>Prestação de contas · ALE</small></div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <p style="margin:0 0 14px;font-size:13px;color:var(--ink-soft);">Entre com o acesso fornecido pela equipe de diárias.</p>
+        <label class="field-label" style="margin-top:0;">E-mail institucional</label>
+        <input type="text" id="login-email" placeholder="nome@ale.ro.gov.br">
+        <label class="field-label">Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••">
+        <button class="btn-full" style="margin-top:16px;" onclick="fbEntrar()">Entrar</button>
+        <p id="login-erro" style="color:var(--danger);font-size:12px;margin-top:10px;display:none;"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: LISTA DE VIAGENS -->
+  <div class="screen" id="screen-lista">
+    <div class="brand-row">
+      <div class="brand">Diária Certa<small>Prestação de contas · ALE</small></div>
+      <div class="back-btn" onclick="fbSair()" title="Sair">⏻</div>
+    </div>
+    <div class="content" id="lista-viagens-container">
+      <p class="empty-hint">Carregando suas viagens...</p>
+    </div>
+  </div>
+
+  <!-- SCREEN NOVA VIAGEM -->
+  <div class="screen" id="screen-nova-viagem">
+    <div class="topbar">
+      <div class="back-btn" onclick="voltar('screen-lista')">←</div>
+      <h1>Cadastrar viagem</h1>
+    </div>
+    <div class="content">
+      <label class="field-label" style="margin-top:0;">Proposto (seu nome)</label>
+      <input type="text" id="nv-nome" placeholder="Nome completo">
+
+      <label class="field-label">Data de Saída</label>
+      <input type="text" id="nv-saida" placeholder="DD/MM/AAAA">
+
+      <label class="field-label">Data de Retorno</label>
+      <input type="text" id="nv-retorno" placeholder="DD/MM/AAAA">
+
+      <label class="field-label">Trecho (trajeto percorrido)</label>
+      <input type="text" id="nv-trajeto" placeholder="Ex: Porto Velho x Ariquemes x Porto Velho">
+
+      <p id="nv-erro" style="color:var(--danger);font-size:12px;margin-top:10px;display:none;"></p>
+      <button class="btn-full" style="margin-top:16px;" onclick="cadastrarViagem()">Cadastrar e começar</button>
+    </div>
+  </div>
+
+
+  <!-- SCREEN 2: DETALHE DA VIAGEM / CHECKLIST -->
+  <div class="screen" id="screen-viagem">
+    <div class="topbar">
+      <div class="back-btn" onclick="voltar('screen-lista')">←</div>
+      <h1 id="viagem-titulo">Viagem</h1>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <p style="margin:0;font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;" id="viagem-datas-info">—</p>
+            <span class="badge prazo" id="badge-prazo" style="margin-top:6px;display:inline-block;">calculando prazo…</span>
+          </div>
+          <div class="selo" id="selo-viagem"><span id="selo-texto">0/3</span></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <span class="progress-label" id="progress-label">0 de 3</span>
+        </div>
+        <p style="margin:10px 0 0;font-size:12.5px;color:var(--ink-soft);"><b id="qtd-faltando">0</b> documento(s) anexado(s) até agora</p>
+      </div>
+    </div>
+
+    <div class="section-label">Tipos de documento (anexe o que se aplicar à viagem)</div>
+    <div class="content" id="lista-tipos-documento">
+      <div class="check-item" id="item-tipo-bilhete" onclick="abrirCaptura('bilhete')">
+        <div class="check-icon">✈</div>
+        <div class="check-body">
+          <p class="check-title">Bilhete de Passagem</p>
+          <p class="check-sub" id="cnt-bilhete">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-certificado" onclick="abrirCaptura('certificado')">
+        <div class="check-icon">🎓</div>
+        <div class="check-body">
+          <p class="check-title">Certificado de Curso</p>
+          <p class="check-sub" id="cnt-certificado">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-convite" onclick="abrirCaptura('convite')">
+        <div class="check-icon">✉</div>
+        <div class="check-body">
+          <p class="check-title">Convite</p>
+          <p class="check-sub" id="cnt-convite">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-declaracao" onclick="abrirCaptura('declaracao')">
+        <div class="check-icon">📄</div>
+        <div class="check-body">
+          <p class="check-title">Declaração de Participação</p>
+          <p class="check-sub" id="cnt-declaracao">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-folder" onclick="abrirCaptura('folder')">
+        <div class="check-icon">📁</div>
+        <div class="check-body">
+          <p class="check-title">Folder</p>
+          <p class="check-sub" id="cnt-folder">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-foto" onclick="abrirCaptura('foto')">
+        <div class="check-icon">📷</div>
+        <div class="check-body">
+          <p class="check-title">Foto</p>
+          <p class="check-sub" id="cnt-foto">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-nota" onclick="abrirCaptura('nota')">
+        <div class="check-icon">🧾</div>
+        <div class="check-body">
+          <p class="check-title">Nota Fiscal</p>
+          <p class="check-sub" id="cnt-nota">Nenhuma anexada</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+      <div class="check-item" id="item-tipo-relatorio_anexo" onclick="abrirCaptura('relatorio_anexo')">
+        <div class="check-icon">📎</div>
+        <div class="check-body">
+          <p class="check-title">Relatório de Viagem (anexo)</p>
+          <p class="check-sub" id="cnt-relatorio_anexo">Nenhum anexado</p>
+        </div>
+        <span class="check-status" style="color:var(--ink-soft)">+ adicionar</span>
+      </div>
+    </div>
+
+    <div class="content" style="margin-top:8px;">
+      <button class="btn-full" id="btn-finalizar" onclick="abrirFinalizar()">Ir para finalização →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: CAPTURA DE DOCUMENTO -->
+  <div class="screen" id="screen-captura">
+    <div class="topbar">
+      <div class="back-btn" onclick="voltar('screen-viagem')">←</div>
+      <h1 id="captura-titulo">Adicionar documento</h1>
+    </div>
+    <div class="content">
+      <p class="field-label" style="margin-top:0;">Tipo de documento</p>
+      <div class="chips" id="chips-tipo">
+        <div class="chip" data-tipo="bilhete">Bilhete de Passagem</div>
+        <div class="chip" data-tipo="certificado">Certificado de Curso</div>
+        <div class="chip" data-tipo="convite">Convite</div>
+        <div class="chip" data-tipo="declaracao">Declaração de Participação</div>
+        <div class="chip" data-tipo="folder">Folder</div>
+        <div class="chip" data-tipo="foto">Foto</div>
+        <div class="chip" data-tipo="nota">Nota Fiscal</div>
+        <div class="chip" data-tipo="relatorio_anexo">Relatório de Viagem (anexo)</div>
+      </div>
+
+      <div class="capture-btns">
+        <button class="btn btn-primary" onclick="document.getElementById('input-camera').click()">
+          <span class="btn-icon">📷</span> Usar câmera
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('input-galeria').click()">
+          <span class="btn-icon">🖼️</span> Da galeria
+        </button>
+      </div>
+      <input class="hidden-input" type="file" id="input-camera" accept="image/*" capture="environment" onchange="arquivoSelecionado(event)">
+      <input class="hidden-input" type="file" id="input-galeria" accept="image/*" onchange="arquivoSelecionado(event)">
+
+      <p class="field-label">Documentos desta viagem</p>
+      <div class="thumb-grid" id="thumb-grid"></div>
+      <p class="empty-hint" id="empty-hint">Nenhum documento capturado ainda</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: FINALIZAR -->
+  <div class="screen" id="screen-finalizar">
+    <div class="topbar">
+      <div class="back-btn" onclick="voltar('screen-viagem')">←</div>
+      <h1>Finalizar prestação</h1>
+    </div>
+    <div class="content">
+      <div class="card">
+        <p style="margin:0 0 10px;font-weight:600;font-size:14px;">Resumo do pacote</p>
+        <p style="margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.7;" id="resumo-final-lista">
+          ✓ Relatório de viagem (capa)<br>
+        </p>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;">
+        O PDF será organizado automaticamente na ordem exigida pelo Art. 13 e enviado para o servidor responsável importar no sistema interno.
+      </p>
+      <button class="btn-full" onclick="gerarPDF()">Gerar PDF e enviar</button>
+      <button class="btn-full secondary" onclick="voltar('screen-viagem')">Voltar e revisar</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: SUCESSO -->
+  <div class="screen" id="screen-sucesso">
+    <div class="success-wrap">
+      <div class="success-selo">✓</div>
+      <p style="font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0 0 8px;">Prestação enviada</p>
+      <p style="font-size:13px;color:var(--ink-soft);margin:0;">O servidor responsável já pode revisar e importar o PDF no sistema interno.</p>
+      <div class="protocol">
+        Nº DO PROTOCOLO<b>DC-2026-000482</b>
+      </div>
+      <button class="btn-full" style="margin-top:26px;" onclick="voltar('screen-lista')">Voltar ao início</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let tipoAtual = null;
+let evidencias = { bilhete:0, certificado:0, convite:0, declaracao:0, folder:0, foto:0, nota:0, relatorio_anexo:0 };
+let viagemAtualId = null;
+let viagemAtualDados = null;
+
+const rotulos = {
+  bilhete:'Bilhete de Passagem', certificado:'Certificado de Curso', convite:'Convite',
+  declaracao:'Declaração de Participação', folder:'Folder', foto:'Foto',
+  nota:'Nota Fiscal', relatorio_anexo:'Relatório de Viagem'
+};
+
+// ---------- Armazenamento local das fotos (IndexedDB) ----------
+// Guarda as fotos no próprio celular enquanto o Firebase Storage não está ativo,
+// assim elas persistem entre os dias de viagem no mesmo aparelho.
+const IDB_NOME = 'diariacerta';
+function idbAbrir(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(IDB_NOME, 1);
+    req.onupgradeneeded = () => {
+      const dbi = req.result;
+      if(!dbi.objectStoreNames.contains('anexos')){
+        const store = dbi.createObjectStore('anexos', { keyPath:'id', autoIncrement:true });
+        store.createIndex('viagemId', 'viagemId');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSalvarAnexo(viagemId, tipo, dataUrl, hora){
+  const dbi = await idbAbrir();
+  return new Promise((resolve, reject)=>{
+    const tx = dbi.transaction('anexos', 'readwrite');
+    tx.objectStore('anexos').add({ viagemId, tipo, dataUrl, hora });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbListarAnexos(viagemId){
+  const dbi = await idbAbrir();
+  return new Promise((resolve, reject)=>{
+    const tx = dbi.transaction('anexos', 'readonly');
+    const req = tx.objectStore('anexos').index('viagemId').getAll(viagemId);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ---------- Prazo (Art. 13: 10 dias após o retorno) ----------
+function calcularPrazo(dataRetornoStr){
+  const partes = (dataRetornoStr || '').split('/').map(Number);
+  if(partes.length !== 3 || partes.some(isNaN)) return { texto:'Prazo indefinido', urgente:false };
+  const [d,m,a] = partes;
+  const prazo = new Date(a, m-1, d);
+  prazo.setDate(prazo.getDate() + 10);
+  prazo.setHours(23,59,59,999);
+  const diffDias = Math.ceil((prazo.getTime() - Date.now()) / 86400000);
+  if(diffDias < 0) return { texto:`Atrasada há ${Math.abs(diffDias)} dia(s)`, urgente:true };
+  if(diffDias <= 3) return { texto:`${diffDias} dia(s) p/ prestar`, urgente:true };
+  return { texto:`${diffDias} dias p/ prestar`, urgente:false };
+}
+
+// ---------- Lista de viagens (dinâmica, via Firestore) ----------
+async function carregarListaViagens(){
+  const container = document.getElementById('lista-viagens-container');
+  if(!window.fbListarViagens){ return; }
+  container.innerHTML = '<p class="empty-hint">Carregando suas viagens...</p>';
+  const viagens = await window.fbListarViagens();
+
+  container.innerHTML = '';
+  if(!viagens.length){
+    const vazio = document.createElement('div');
+    vazio.className = 'card';
+    vazio.style.textAlign = 'center';
+    vazio.style.padding = '28px 16px';
+    vazio.innerHTML = `<p style="margin:0 0 14px;font-size:13px;color:var(--ink-soft);">Você ainda não tem nenhuma viagem cadastrada.</p>`;
+    container.appendChild(vazio);
+  } else {
+    viagens.sort((a,b)=> (b.criadoEmMs||0) - (a.criadoEmMs||0));
+    viagens.forEach(v=>{
+      const prazo = calcularPrazo(v.dataRetorno);
+      const anexosQtd = (v.checklist && v.checklist.totalAnexos) || 0;
+      const badgeHtml = v.status === 'importada'
+        ? '<span class="badge ok">Importada</span>'
+        : v.status === 'pronta_para_revisao'
+          ? '<span class="badge ok">Pronta / enviada</span>'
+          : `<span class="badge prazo${prazo.urgente ? ' urgente' : ''}">${prazo.texto}</span>`;
+      const card = document.createElement('div');
+      card.className = 'card trip-card';
+      card.onclick = () => abrirViagemExistente(v.id);
+      card.innerHTML = `
+        <div class="trip-card-top">
+          <div>
+            <p class="trip-dest">${v.trajetoPercorrido || 'Trajeto não informado'}</p>
+            <p class="trip-dates">${v.dataSaida || '—'} → ${v.dataRetorno || '—'}</p>
+          </div>
+          ${badgeHtml}
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">${anexosQtd} documento(s) anexado(s)</span>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  const btnNova = document.createElement('button');
+  btnNova.className = 'btn-full';
+  btnNova.style.marginTop = '6px';
+  btnNova.textContent = '+ Cadastrar nova viagem';
+  btnNova.onclick = () => mostrar('screen-nova-viagem');
+  container.appendChild(btnNova);
+}
+
+async function cadastrarViagem(){
+  const nome = document.getElementById('nv-nome').value.trim();
+  const saida = document.getElementById('nv-saida').value.trim();
+  const retorno = document.getElementById('nv-retorno').value.trim();
+  const trajeto = document.getElementById('nv-trajeto').value.trim();
+  const erro = document.getElementById('nv-erro');
+  if(!nome || !saida || !retorno || !trajeto){
+    erro.textContent = 'Preencha todos os campos para cadastrar a viagem.';
+    erro.style.display = 'block';
+    return;
+  }
+  erro.style.display = 'none';
+  const id = await window.fbCadastrarViagem({ nome, dataSaida:saida, dataRetorno:retorno, trajeto });
+  document.getElementById('nv-nome').value = '';
+  document.getElementById('nv-saida').value = '';
+  document.getElementById('nv-retorno').value = '';
+  document.getElementById('nv-trajeto').value = '';
+  await abrirViagemExistente(id);
+}
+
+async function abrirViagemExistente(id){
+  viagemAtualId = id;
+  if(window.fbSelecionarViagem) window.fbSelecionarViagem(id);
+  const v = await window.fbCarregarViagem(id);
+  viagemAtualDados = v;
+
+  document.getElementById('viagem-titulo').textContent = v.trajetoPercorrido || 'Viagem';
+  const prazo = calcularPrazo(v.dataRetorno);
+  document.getElementById('viagem-datas-info').textContent = `RETORNO ${v.dataRetorno || '—'}`;
+  const badge = document.getElementById('badge-prazo');
+  badge.textContent = prazo.texto;
+  badge.className = 'badge prazo' + (prazo.urgente ? ' urgente' : '');
+
+  evidencias = { bilhete:0, certificado:0, convite:0, declaracao:0, folder:0, foto:0, nota:0, relatorio_anexo:0 };
+  thumbsData = [];
+  const salvos = await idbListarAnexos(id);
+  salvos.forEach(a=>{
+    evidencias[a.tipo] = (evidencias[a.tipo]||0) + 1;
+    thumbsData.push({ src:a.dataUrl, tipo:a.tipo, label:rotulos[a.tipo], hora:a.hora });
+  });
+  renderThumbs();
+  atualizarChecklist();
+  mostrar('screen-viagem');
+}
+
+function mostrar(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function voltar(id){
+  if(id === 'screen-lista') carregarListaViagens();
+  mostrar(id);
+}
+function abrirFinalizar(){
+  const linhas = [];
+  Object.keys(rotulos).forEach(tipo=>{
+    const qtd = evidencias[tipo] || 0;
+    if(qtd) linhas.push(`✓ ${rotulos[tipo]} (${qtd})`);
+  });
+  document.getElementById('resumo-final-lista').innerHTML = linhas.length
+    ? linhas.join('<br>')
+    : 'Nenhum documento anexado ainda.';
+  mostrar('screen-finalizar');
+}
+
+function abrirCaptura(tipoSugerido){
+  mostrar('screen-captura');
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  const alvo = document.querySelector(`.chip[data-tipo="${tipoSugerido}"]`);
+  if(alvo){ alvo.classList.add('selected'); tipoAtual = tipoSugerido; }
+  document.getElementById('captura-titulo').textContent = rotulos[tipoSugerido] || 'Adicionar documento';
+  renderThumbs();
+}
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+    chip.classList.add('selected');
+    tipoAtual = chip.dataset.tipo;
+  });
+});
+
+function arquivoSelecionado(e){
+  const file = e.target.files[0];
+  if(!file || !tipoAtual) return;
+  const reader = new FileReader();
+  reader.onload = async function(ev){
+    const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    evidencias[tipoAtual] = (evidencias[tipoAtual]||0) + 1;
+    addThumb(ev.target.result, tipoAtual, hora);
+    atualizarChecklist();
+    if(viagemAtualId){
+      try{ await idbSalvarAnexo(viagemAtualId, tipoAtual, ev.target.result, hora); }catch(err){ console.error(err); }
+    }
+    if(window.fbUploadAnexo) window.fbUploadAnexo(ev.target.result, tipoAtual);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+let thumbsData = [];
+function addThumb(src, tipo, hora){
+  hora = hora || new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  thumbsData.push({src, tipo, label: rotulos[tipo], hora});
+  renderThumbs();
+}
+function renderThumbs(){
+  const grid = document.getElementById('thumb-grid');
+  const hint = document.getElementById('empty-hint');
+  grid.innerHTML = '';
+  thumbsData.forEach(t=>{
+    const div = document.createElement('div');
+    div.className='thumb';
+    div.innerHTML = `<img src="${t.src}"><div class="thumb-tag">${t.label} · ${t.hora}</div>`;
+    grid.appendChild(div);
+  });
+  hint.style.display = thumbsData.length ? 'none' : 'block';
+}
+
+function atualizarChecklist(){
+  Object.keys(rotulos).forEach(tipo=>{
+    const qtd = evidencias[tipo] || 0;
+    const cnt = document.getElementById('cnt-'+tipo);
+    if(cnt) cnt.textContent = qtd ? `${qtd} anexado(s)` : 'Nenhum anexado';
+    const item = document.getElementById('item-tipo-'+tipo);
+    if(item) item.classList.toggle('done', qtd>0);
+    const statusEl = item ? item.querySelector('.check-status') : null;
+    if(statusEl) statusEl.textContent = qtd ? '✓' : '+ adicionar';
+    if(statusEl) statusEl.style.color = qtd ? 'var(--primary)' : 'var(--ink-soft)';
+  });
+
+  const totalAnexos = Object.values(evidencias).reduce((a,b)=>a+b, 0);
+  document.getElementById('selo-texto').textContent = totalAnexos > 0 ? '✓' : '—';
+  document.getElementById('selo-viagem').classList.toggle('completo', totalAnexos > 0);
+  document.getElementById('progress-label').textContent = `${totalAnexos} anexo(s)`;
+  document.getElementById('progress-fill').style.width = totalAnexos > 0 ? '100%' : '10%';
+  document.getElementById('qtd-faltando').textContent = totalAnexos;
+
+  const btn = document.getElementById('btn-finalizar');
+  btn.disabled = false;
+  btn.textContent = 'Ir para finalização →';
+  btn.onclick = abrirFinalizar;
+
+  if(window.fbAtualizarChecklist && viagemAtualId){
+    window.fbAtualizarChecklist(viagemAtualId, { totalAnexos });
+  }
+}
+
+function setItem(id, done){
+  const el = document.getElementById(id);
+  el.classList.toggle('done', done);
+  const icon = el.querySelector('.check-icon');
+  const status = el.querySelector('.check-status');
+  if(done){
+    icon.textContent = '✓';
+    status.textContent = 'OK';
+  }
+}
+
+async function gerarPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const W = 595, M = 48;
+  let y = M;
+
+  // Capa — Prestação de Contas de Diárias
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('Prestação de Contas de Diárias', M, y); y += 26;
+  doc.setDrawColor(210); doc.line(M, y, W-M, y); y += 22;
+
+  doc.setFontSize(10); doc.setTextColor(90);
+  const campo = (label, valor) => {
+    doc.setFont('helvetica','bold'); doc.setTextColor(20);
+    doc.text(label, M, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(60);
+    const lines = doc.splitTextToSize(valor, W - 2*M - 110);
+    doc.text(lines, M + 115, y);
+    y += Math.max(16, lines.length*13) + 6;
+  };
+
+  const v = viagemAtualDados || {};
+  campo('Setor:', (v.proposto && v.proposto.setor) || '');
+  campo('Proposto:', (v.proposto && v.proposto.nome) || '');
+  campo('Data Saída:', v.dataSaida || '');
+  campo('Data Retorno:', v.dataRetorno || '');
+  campo('Trajeto Percorrido:', v.trajetoPercorrido || '');
+
+  y += 10; doc.setDrawColor(210); doc.line(M, y, W-M, y); y += 20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20);
+  doc.text('Anexos desta prestação (' + thumbsData.length + ')', M, y); y += 18;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(80);
+  thumbsData.forEach((t,i)=>{
+    doc.text(`${i+1}. ${t.label} — capturado às ${t.hora}`, M, y);
+    y += 15;
+  });
+
+  // Uma página por anexo, cada foto convertida em página própria do PDF
+  thumbsData.forEach((t, i)=>{
+    doc.addPage();
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20);
+    doc.text(`Anexo ${i+1} — ${t.label}`, M, M);
+    doc.setDrawColor(210); doc.line(M, M+10, W-M, M+10);
+    try{
+      const props = doc.getImageProperties(t.src);
+      const maxW = W - 2*M, maxH = 750 - M*2 - 30;
+      let iw = props.width, ih = props.height;
+      const scale = Math.min(maxW/iw, maxH/ih);
+      iw *= scale; ih *= scale;
+      doc.addImage(t.src, props.fileType, M, M+30, iw, ih);
+    }catch(e){}
+  });
+
+  doc.save('prestacao-contas-diarias.pdf');
+
+  let protocolo = 'DC-2026-000482';
+  if(window.fbFinalizar){
+    try{
+      const dataUri = doc.output('datauristring');
+      const idReal = await window.fbFinalizar(dataUri, 1 + thumbsData.length);
+      if(idReal) protocolo = idReal;
+    }catch(err){ console.error('Falha ao enviar pro Firebase:', err); }
+  }
+  const protocoloEl = document.querySelector('#screen-sucesso .protocol b');
+  if(protocoloEl) protocoloEl.textContent = protocolo;
+
+  mostrar('screen-sucesso');
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, addDoc, updateDoc, collection, serverTimestamp,
+  query, where, limit, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref, uploadString, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAKsU02YiELv_wUEtX6FZOj95y8AQCsyG0",
+  authDomain: "diaria-certa-b1781.firebaseapp.com",
+  projectId: "diaria-certa-b1781",
+  storageBucket: "diaria-certa-b1781.firebasestorage.app",
+  messagingSenderId: "7314084306",
+  appId: "1:7314084306:web:002942adfe8b78f4f9380b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+let viagemId = null;
+
+window.fbEntrar = async function(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const erro = document.getElementById('login-erro');
+  erro.style.display = 'none';
+  try{
+    await signInWithEmailAndPassword(auth, email, senha);
+  }catch(e){
+    erro.textContent = 'Não foi possível entrar. Confira e-mail e senha.';
+    erro.style.display = 'block';
+  }
+};
+
+window.fbSair = function(){ signOut(auth); };
+
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    window.mostrar('screen-lista');
+    if(window.carregarListaViagens) window.carregarListaViagens();
+  } else {
+    window.mostrar('screen-login');
+  }
+});
+
+window.fbSelecionarViagem = function(id){
+  viagemId = id;
+};
+
+window.fbListarViagens = async function(){
+  const user = auth.currentUser;
+  if(!user) return [];
+  const q = query(collection(db, 'viagens'), where('propostoUid', '==', user.uid));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+window.fbCarregarViagem = async function(id){
+  const snap = await getDoc(doc(db, 'viagens', id));
+  return snap.exists() ? { id, ...snap.data() } : null;
+};
+
+window.fbCadastrarViagem = async function(dados){
+  const user = auth.currentUser;
+  const novo = await addDoc(collection(db, 'viagens'), {
+    propostoUid: user.uid,
+    proposto: { nome: dados.nome, setor: 'SUPERINTENDÊNCIA DE LOGÍSTICA' },
+    dataSaida: dados.dataSaida,
+    dataRetorno: dados.dataRetorno,
+    trajetoPercorrido: dados.trajeto,
+    checklist: { totalAnexos: 0 },
+    status: 'em_andamento',
+    pdfPaginas: 0,
+    criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp()
+  });
+  return novo.id;
+};
+
+window.fbAtualizarChecklist = async function(id, checklist){
+  await updateDoc(doc(db, 'viagens', id), { checklist, atualizadoEm: serverTimestamp() });
+};
+
+window.fbUploadAnexo = async function(dataUrl, tipo){
+  if(!viagemId) return;
+  // Fase 1 (plano gratuito, sem Storage): grava só o metadado do anexo.
+  // Quando o Storage for ativado (plano Blaze), volta a subir o arquivo aqui.
+  await addDoc(collection(db, 'viagens', viagemId, 'anexos'), {
+    tipo, capturadoEm: serverTimestamp()
+  });
+};
+
+window.fbFinalizar = async function(pdfDataUri, paginas){
+  if(!viagemId) return null;
+  // Fase 1 (plano gratuito, sem Storage): o PDF continua baixando localmente
+  // (já feito por doc.save antes desta função ser chamada). Aqui só atualizamos
+  // o status no Firestore, pra aparecer no painel da equipe.
+  await updateDoc(doc(db, 'viagens', viagemId), {
+    status: 'pronta_para_revisao',
+    pdfPaginas: paginas,
+    atualizadoEm: serverTimestamp()
+  });
+  return viagemId;
+};
+</script>
+</body>
+</html>
